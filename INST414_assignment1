@@ -1,0 +1,11 @@
+import requests
+from bs4 import BeautifulSoup
+
+url = "https://www.basketball-reference.com/leagues/NBA_2024_totals.html"
+response = requests.get(url)
+soup = BeautifulSoup(response.text, 'html.parser')
+
+data = []
+for row in soup.find_all('tr')[1:]:  
+    cols = row.find_all('td')
+    data.append([col.text for col in cols])
