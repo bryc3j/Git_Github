@@ -1,0 +1,56 @@
+import instaloader
+import pandas as pd
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import CountVectorizer
+from collections import Counter
+
+
+L = instaloader.Instaloader()
+
+
+users = ["kingjames", "kevindurant", "stephencurry30", "giannis_an34", "russwest44", "carmeloanthony", 
+         "dwyanewade", "kobebryant", "chrisbosh", "paulgeorge", "anthony_davis"]
+
+
+user_data = {}
+for user in users:
+    try:
+        profile = instaloader.Profile.from_username(L.context, user)
+        user_data[user] = {
+            "followers": set(profile.get_followers()),  # Follower set
+            "hashtags": Counter(),  # Hashtag frequency
+            "common_posts": []  # Placeholder for common content features
+        }
+        for post in profile.get_posts():
+            for hashtag in post.caption_hashtags:
+                user_data[user]["hashtags"][hashtag] += 1
+    except Exception as e:
+        print(f"Error collecting data for {user}: {e}")
+
+
+all_hashtags = list(set([tag for u in user_data for tag in user_data[u]["hashtags"]]))
+
+
+vectorizer = CountVectorizer(vocabulary=all_hashtags, tokenizer=lambda x: x)
+hashtag_vectors = np.array([vectorizer.fit_transform([list(user_data[u]["hashtags"].elements())]).toarray()[0] for u in users])
+
+
+similarity_matrix = cosine_similarity(hashtag_vectors)
+
+
+query_index = users.index("kingjames")
+lebron_similarities = list(enumerate(similarity_matrix[query_index]))
+lebron_similarities.sort(key=lambda x: x[1], reverse=True)
+
+
+top_10_similar = [(users[i], score) for i, score in lebron_similarities if i != query_index][:10]
+
+
+print("Top 10 Instagram users most similar to LeBron James:")
+for rank, (user, score) in enumerate(top_10_similar, 1):
+    print(f"{rank}. {user} - Similarity Score: {score:.2f}")
+
+
+df = pd.DataFrame(top_10_similar, columns=["Instagram User", "Similarity Score"])
+df.to_csv("lebron_similar_users.csv", index=False)
